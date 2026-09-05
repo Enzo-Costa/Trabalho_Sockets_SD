@@ -1,14 +1,14 @@
 # Trabalho 1: Sockets TCP Interoperáveis (Java & C#)
 
-**Disciplina:** Sistemas Distribuídos (2025/1) — IME/UERJ[cite: 1]  
-**Professor:** Alexandre Sztajnberg[cite: 1]  
-**Autores:** [Seu Nome / Nome da Dupla][cite: 1]  
+**Disciplina:** Sistemas Distribuídos (2026/1)  
+**Professor:** Alexandre Sztajnberg  
+**Alunos:** Enzo Moraes da Costa e Marcos Alves   
 
 ---
 
 ## 1. Descrição do Projeto
 
-Este projeto consiste na implementação de uma aplicação cliente-servidor utilizando **Sockets TCP puros** para comunicação interprocessos (IPC)[cite: 1]. O objetivo principal é demonstrar a interoperabilidade entre duas linguagens de programação diferentes (**Java** e **C#**) trocando mensagens padronizadas em JSON[cite: 1].
+Este projeto consiste na implementação de uma aplicação cliente-servidor utilizando **Sockets TCP puros** para comunicação interprocessos (IPC). O objetivo principal é demonstrar a interoperabilidade entre duas linguagens de programação diferentes (**Java** e **C#**) trocando mensagens padronizadas em JSON.
 
 ### Modelo de Comunicação: TCP 1 con
 A aplicação segue o modelo `TCP 1 con`, onde uma nova conexão TCP é aberta pelo cliente a cada requisição, processada pelo servidor, e finalizada após o envio da resposta.
@@ -22,12 +22,12 @@ Todas as requisições e respostas utilizam o formato JSON delimitado por uma qu
 ### Formato da Requisição
 ```json
 {"tipo": "int" | "char" | "string", "val": "<valor>"}
-```[cite: 1]
+```
 
 ### Regras de Negócio do Servidor
-* **`int`**: Converte o valor para número inteiro, incrementa +1 e retorna[cite: 1].
-* **`char`**: Inverte a caixa do caractere (maiúscula <-> minúscula) e retorna[cite: 1].
-* **`string`**: Inverte a ordem da cadeia de caracteres (*string reversal*) e retorna[cite: 1].
+* **`int`**: Converte o valor para número inteiro, incrementa +1 e retorna.
+* **`char`**: Inverte a caixa do caractere (maiúscula <-> minúscula) e retorna.
+* **`string`**: Inverte a ordem da cadeia de caracteres (*string reversal*) e retorna.
 
 ---
 
@@ -108,7 +108,7 @@ trabalho-sockets/
 
 ## 5. Medição de Desempenho (RTT)
 
-O *Round Trip Time* (RTT) é medido no lado do cliente isolando o tempo gasto no estabelecimento da conexão socket, envio da mensagem e recepção completa do retorno[cite: 1]:
+O *Round Trip Time* (RTT) é medido no lado do cliente isolando o tempo gasto no estabelecimento da conexão socket, envio da mensagem e recepção completa do retorno:
 * **Java:** Medido via `System.nanoTime()`.
 * **C#:** Medido via `System.Diagnostics.Stopwatch`.
 
