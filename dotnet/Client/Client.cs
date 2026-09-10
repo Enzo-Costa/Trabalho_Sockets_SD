@@ -12,140 +12,119 @@ namespace SocketClient
         {
             string host = "127.0.0.1";
             int port = 5000;
+            bool executando = true;
 
-            // Estrutura com os payloads para teste
-            var testes = new[]
+            while (executando)
             {
-                new { Tipo = "int", Val = "37" },
-                new { Tipo = "char", Val = "m" },
-                new { Tipo = "string", Val = "Sistemas Distribuidos UERJ" }
-            };
-            Console.WriteLine("=== AGUARDANDO TIPO DE INPUT (SELECIONE ENTRE  0,1 E 2) ===");
-            Console.WriteLine("0: INT");
-            Console.WriteLine("1: CHAR");
-            Console.WriteLine("2: STRING");
-            Console.WriteLine("X: DEMONSTRACAO COM OS TRES TIPOS");
-            var tipo_vari = Console.ReadLine();
-            var input_tipo = 0;
-            switch (tipo_vari)
+                Console.WriteLine("\n==================================================");
+                Console.WriteLine("=== MENU DE OPÇÕES (SELECIONE ENTRE 0, 1, 2, X ou S) ===");
+                Console.WriteLine("0: INT");
+                Console.WriteLine("1: CHAR");
+                Console.WriteLine("2: STRING");
+                Console.WriteLine("X: DEMONSTRAÇÃO COM OS TRÊS TIPOS");
+                Console.WriteLine("S: SAIR");
+                Console.Write("Opção: ");
+                
+                string? tipo_vari = Console.ReadLine()?.Trim();
+                
+                if (string.Equals(tipo_vari, "S", StringComparison.OrdinalIgnoreCase))
+                {
+                    executando = false;
+                    Console.WriteLine("Encerrando o cliente...");
+                    continue;
+                }
+
+                // Cria o lote de testes baseado na escolha do usuário
+                var testes = ObterTestes(tipo_vari);
+
+                Console.WriteLine("\n=== INICIANDO TRANSMISSÃO TCP (1 CON POR ENVIO) ===");
+                
+                foreach (var teste in testes)
+                {
+                    EnviarReceberPayload(host, port, teste.Tipo, teste.Val);
+                }
+            }
+
+            Console.WriteLine("=== APLICAÇÃO FINALIZADA ===");
+        }
+
+        private static (string Tipo, string Val)[] ObterTestes(string? opcao)
+        {
+            switch (opcao)
             {
                 case "0":
-                    Console.WriteLine("INT");
-                    input_tipo = 0;
-                    break;
+                    Console.Write("=== AGUARDANDO INPUT DE INT ===\nDigite um valor: ");
+                    string? inputInt = Console.ReadLine();
+                    if (!int.TryParse(inputInt, out _))
+                    {
+                        Console.WriteLine("=== INT FORA DE ESCALA/INVÁLIDO, USANDO 0 ===");
+                        inputInt = "0";
+                    }
+                    return new[] { (Tipo: "int", Val: inputInt) };
+
                 case "1":
-                    Console.WriteLine("CHAR");
-                    input_tipo = 1;
-                    break;
+                    Console.Write("=== AGUARDANDO INPUT DE CHAR ===\nDigite um caractere: ");
+                    string? inputChar = Console.ReadLine();
+                    if (string.IsNullOrEmpty(inputChar) || inputChar.Length != 1)
+                    {
+                        Console.WriteLine("=== CHAR INVÁLIDO, USANDO WHITESPACE ===");
+                        inputChar = " ";
+                    }
+                    return new[] { (Tipo: "char", Val: inputChar) };
+
                 case "2":
-                    Console.WriteLine("STRING");
-                    input_tipo = 2;
-                    break;
+                    Console.Write("=== AGUARDANDO INPUT DE STRING ===\nDigite uma string: ");
+                    string? inputStr = Console.ReadLine();
+                    if (string.IsNullOrEmpty(inputStr))
+                    {
+                        Console.WriteLine("=== STRING VAZIA, USANDO WHITESPACE ===");
+                        inputStr = " ";
+                    }
+                    return new[] { (Tipo: "string", Val: inputStr) };
+
+                case "X":
+                case "x":
                 default:
-                    input_tipo = 3;
-                    Console.WriteLine("DEMONSTACAO");
-                    break;
+                    Console.WriteLine("=== SEGUINDO COM VARIÁVEIS DE TESTE PADRÃO ===");
+                    return new[]
+                    {
+                        (Tipo: "int", Val: "37"),
+                        (Tipo: "char", Val: "m"),
+                        (Tipo: "string", Val: "Sistemas Distribuidos UERJ")
+                    };
             }
-            if (input_tipo == 0)
+        }
+
+        private static void EnviarReceberPayload(string host, int port, string tipo, string val)
+        {
+            try
             {
-                Console.WriteLine("=== AGUARDANDO INPUT DE INT ===");
-                var returner = Console.ReadLine();
-                int x = 0;
-                if (Int32.TryParse(returner, out x))
+                // TCP 1 con: Conexão criada e descartada a cada mensagem enviada
+                using TcpClient client = new TcpClient(host, port);
+                using NetworkStream stream = client.GetStream();
+                using StreamWriter writer = new StreamWriter(stream) { AutoFlush = true };
+                using StreamReader reader = new StreamReader(stream);
+
+                var req = new JsonObject
                 {
-                    testes = new[]
-                    {
-                        new { Tipo = "int", Val = returner }
-                    };
-                }
-                else
-                {
-                    Console.WriteLine("=== INT FORA DE ESCALA, RETORNANDO A 0 ===");
-                    testes = new[]
-                    {
-                        new { Tipo = "int", Val = "0" }
-                    };
-                }
+                    ["tipo"] = tipo,
+                    ["val"] = val
+                };
+
+                Stopwatch stopwatch = Stopwatch.StartNew();
+                writer.WriteLine(req.ToJsonString());
+
+                string? responseLine = reader.ReadLine();
+                stopwatch.Stop();
+
+                double rttMs = stopwatch.Elapsed.TotalMilliseconds;
+
+                Console.WriteLine($"[{tipo.ToUpper()}] Enviado: {req.ToJsonString()} | Resposta: {responseLine} | RTT: {rttMs:F3} ms");
             }
-            else if (input_tipo == 1)
+            catch (Exception ex)
             {
-                Console.WriteLine("=== AGUARDANDO INPUT DE CHAR ===");
-                var char_vazio = " ";
-                var returner = Console.ReadLine();
-                if (returner.Length == 1)
-                {
-                    testes = new[]
-                    {
-                        new { Tipo = "char", Val = returner }
-                    };
-                }
-                else
-                {
-                    Console.WriteLine("=== CHAR FORA DE ESCALA, RETORNANDO WHITESPACE ===");
-                    testes = new[]
-                    {
-                        new { Tipo = "char", Val = char_vazio }
-                    };
-                }
+                Console.WriteLine($"Erro ao conectar ou transmitir tipo {tipo}: {ex.Message}");
             }
-            else if (input_tipo == 2)
-            {
-                Console.WriteLine("=== AGUARDANDO INPUT DE STRING ===");
-                var char_vazio = " ";
-                var returner = Console.ReadLine();
-                if (returner.Length > 0)
-                {
-                    testes = new[]
-                    {
-                        new { Tipo = "string", Val = returner }
-                    };
-                }
-                else
-                {
-                    Console.WriteLine("=== STRING VAZIA, RETORNANDO WHITESPACE ===");
-                    testes = new[]
-                    {
-                        new { Tipo = "string", Val = char_vazio }
-                    };
-                }
-            }
-            else
-            {
-                Console.WriteLine("=== SEGUINDO COM VARIÁVEIS DE TESTE ===");
-            }
-            Console.WriteLine("=== INICIANDO BATERIA DE TESTES (CLIENTE C#) ===");
-            foreach (var teste in testes)
-            {
-                try
-                {
-                    using TcpClient client = new TcpClient(host, port);
-                    using NetworkStream stream = client.GetStream();
-                    using StreamWriter writer = new StreamWriter(stream) { AutoFlush = true };
-                    using StreamReader reader = new StreamReader(stream);
-
-                    var req = new JsonObject
-                    {
-                        ["tipo"] = teste.Tipo,
-                        ["val"] = teste.Val
-                    };
-
-                    Stopwatch stopwatch = Stopwatch.StartNew();
-                    writer.WriteLine(req.ToJsonString());
-
-                    string? responseLine = reader.ReadLine();
-                    stopwatch.Stop();
-
-                    double rttMs = stopwatch.Elapsed.TotalMilliseconds;
-
-                    Console.WriteLine($"[{teste.Tipo.ToUpper()}] Enviado: {req.ToJsonString()} | Resposta: {responseLine} | RTT: {rttMs:F3} ms");
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine($"Erro ao testar tipo {teste.Tipo}: {ex.Message}");
-                }
-            }
-
-            Console.WriteLine("=== TESTES CONCLUÍDOS ===");
         }
     }
 }
